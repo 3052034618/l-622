@@ -85,11 +85,11 @@ export const generateTimeSeriesData = (days: number = 7): TimeSeriesData[] => {
 export const getNotStartedEmployees = () => {
   const allEmployeeIds = new Set(appointments.map(a => a.userId));
   const notStarted = [
-    { id: 'user-011', name: '孙七', department: '技术研发部', employeeNo: 'EMP2023011' },
-    { id: 'user-012', name: '周八', department: '技术研发部', employeeNo: 'EMP2023012' },
-    { id: 'user-013', name: '吴九', department: '市场营销部', employeeNo: 'EMP2023013' },
-    { id: 'user-014', name: '郑十', department: '财务部', employeeNo: 'EMP2022010' },
-    { id: 'user-015', name: '冯十一', department: '运营部', employeeNo: 'EMP2022011' },
+    { id: 'user-011', name: '孙七', department: '技术研发部', departmentName: '技术研发部', employeeNo: 'EMP2023011', gender: 'male', age: 26, recommendedPackage: '基础体检套餐A', estimatedCost: 880 },
+    { id: 'user-012', name: '周八', department: '技术研发部', departmentName: '技术研发部', employeeNo: 'EMP2023012', gender: 'female', age: 30, recommendedPackage: '标准体检套餐B', estimatedCost: 1680 },
+    { id: 'user-013', name: '吴九', department: '市场营销部', departmentName: '市场营销部', employeeNo: 'EMP2023013', gender: 'male', age: 35, recommendedPackage: '标准体检套餐B', estimatedCost: 1680 },
+    { id: 'user-014', name: '郑十', department: '财务部', departmentName: '财务部', employeeNo: 'EMP2022010', gender: 'female', age: 42, recommendedPackage: '精英体检套餐C', estimatedCost: 3280 },
+    { id: 'user-015', name: '冯十一', department: '运营部', departmentName: '运营部', employeeNo: 'EMP2022011', gender: 'male', age: 28, recommendedPackage: '基础体检套餐A', estimatedCost: 880 },
   ];
   return notStarted.filter(e => !allEmployeeIds.has(e.id));
 };

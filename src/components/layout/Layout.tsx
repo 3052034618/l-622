@@ -1,22 +1,16 @@
-import { Outlet, useLocation, Navigate, ReactNode } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useAuthStore } from '@/store/useAuthStore';
 import { AnimatePresence, motion } from 'framer-motion';
 
-interface LayoutProps {
-  children?: ReactNode;
-}
-
-export function Layout({ children }: LayoutProps) {
+export function Layout() {
   const { user } = useAuthStore();
   const location = useLocation();
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  const content = children || <Outlet />;
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
@@ -32,7 +26,7 @@ export function Layout({ children }: LayoutProps) {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {content}
+              <Outlet />
             </motion.div>
           </AnimatePresence>
         </main>

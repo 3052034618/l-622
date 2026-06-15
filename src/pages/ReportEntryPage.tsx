@@ -22,6 +22,7 @@ import { Modal } from '@/components/ui/Modal';
 import { cn, getStatusColor, formatCurrency } from '@/utils';
 import { ReportItem } from '@/types';
 import { appointments } from '@/mock/data/appointments';
+import { users } from '@/mock/data/users';
 import dayjs from 'dayjs';
 
 export function ReportEntryPage() {
@@ -39,6 +40,7 @@ export function ReportEntryPage() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,7 +55,9 @@ export function ReportEntryPage() {
 
   const handleSelectAppointment = (apt: any) => {
     setSelectedAppointment(apt);
-    createDraft(apt, user!);
+    const employee = users.find(u => u.id === apt.userId);
+    setSelectedEmployee(employee || null);
+    createDraft(apt, employee || user!);
   };
 
   const handleItemChange = (itemId: string, field: keyof ReportItem, value: any) => {
@@ -76,10 +80,11 @@ export function ReportEntryPage() {
     
     setSubmitting(true);
     try {
-      const result = await submitReport();
+      const result = await submitReport(user!.id, user!.name);
       if (result.success) {
         setShowConfirmModal(false);
         setSelectedAppointment(null);
+        setSelectedEmployee(null);
         clearDraft();
       }
     } finally {
@@ -201,7 +206,7 @@ export function ReportEntryPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => { setSelectedAppointment(null); clearDraft(); }}
+                    onClick={() => { setSelectedAppointment(null); setSelectedEmployee(null); clearDraft(); }}
                   >
                     <X className="w-4 h-4 mr-1" />
                     关闭
@@ -216,16 +221,16 @@ export function ReportEntryPage() {
                     <div className="p-3 bg-slate-50 rounded-lg">
                       <p className="text-xs text-slate-500">性别</p>
                       <p className="font-semibold text-slate-900">
-                        {selectedAppointment.userGender === 'male' ? '男' : '女'}
+                        {selectedEmployee?.gender === 'male' ? '男' : '女'}
                       </p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-lg">
                       <p className="text-xs text-slate-500">年龄</p>
-                      <p className="font-semibold text-slate-900">{selectedAppointment.userAge}岁</p>
+                      <p className="font-semibold text-slate-900">{selectedEmployee?.age || '-'}岁</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-lg">
                       <p className="text-xs text-slate-500">部门</p>
-                      <p className="font-semibold text-slate-900">{selectedAppointment.userDept}</p>
+                      <p className="font-semibold text-slate-900">{selectedEmployee?.departmentName || selectedAppointment.departmentName || '-'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -435,7 +440,7 @@ export function ReportEntryPage() {
                   <Button
                     fullWidth
                     variant="secondary"
-                    onClick={() => { setSelectedAppointment(null); clearDraft(); }}
+                    onClick={() => { setSelectedAppointment(null); setSelectedEmployee(null); clearDraft(); }}
                   >
                     取消录入
                   </Button>

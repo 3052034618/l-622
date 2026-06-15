@@ -29,17 +29,39 @@ import dayjs from 'dayjs';
 
 const CHART_COLORS = ['#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
+const defaultStats = {
+  totalEmployees: 0,
+  completedReports: 0,
+  completionRate: 0,
+  totalSpent: 0,
+  budgetUsed: 0,
+  budgetTotal: 0,
+  notStartedCount: 0,
+  abnormalCount: 0,
+  todayAppointments: 0,
+  todayCompleted: 0,
+  abnormalReports: 0,
+  budgetProgress: 0,
+  pendingApprovals: 0,
+  completedToday: 0,
+  inProgress: 0,
+  pending: 0,
+  budgetSpent: 0,
+};
+
 export function StatisticsPage() {
   const { user } = useAuthStore();
-  const { 
-    stats, 
-    departmentStats, 
-    packageStats, 
+  const {
+    stats: rawStats,
+    departmentStats,
+    packageStats,
     timeSeriesData,
     notStartedList,
     loadData,
     departments
   } = useDashboardStore();
+
+  const stats = rawStats || defaultStats;
 
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format('YYYY-MM'));
   const [selectedDept, setSelectedDept] = useState<string>('all');

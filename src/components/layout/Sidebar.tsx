@@ -22,9 +22,9 @@ const menuItems = [
   { path: '/', label: '数据大屏', icon: LayoutDashboard, roles: ['employee', 'doctor', 'hr', 'admin'] },
   { path: '/appointment', label: '体检预约', icon: CalendarCheck, roles: ['employee'] },
   { path: '/appointment/history', label: '预约记录', icon: FileText, roles: ['employee'] },
-  { path: '/report', label: '体检报告', icon: FileText, roles: ['employee', 'doctor', 'hr', 'admin'] },
-  { path: '/report/entry', label: '报告录入', icon: ClipboardCheck, roles: ['doctor'] },
-  { path: '/approval', label: '费用审批', icon: ClipboardCheck, roles: ['hr', 'admin'] },
+  { path: '/reports', label: '体检报告', icon: FileText, roles: ['employee', 'doctor', 'hr', 'admin'] },
+  { path: '/reports/entry', label: '报告录入', icon: ClipboardCheck, roles: ['doctor'] },
+  { path: '/approvals', label: '费用审批', icon: ClipboardCheck, roles: ['hr', 'admin'] },
   { path: '/statistics', label: '统计报表', icon: BarChart3, roles: ['hr', 'admin'] },
   { path: '/admin/packages', label: '套餐管理', icon: Settings, roles: ['admin'] },
   { path: '/admin/rules', label: '规则配置', icon: Settings, roles: ['admin'] },
@@ -97,7 +97,7 @@ export function Sidebar() {
                     )}
                     <item.icon className="w-5 h-5" />
                     <span className="flex-1">{item.label}</span>
-                    {item.path === '/approval' && pendingCount > 0 && (
+                    {item.path === '/approvals' && pendingCount > 0 && (
                       <Badge variant="danger" size="sm" className="min-w-[20px] justify-center">
                         {pendingCount}
                       </Badge>

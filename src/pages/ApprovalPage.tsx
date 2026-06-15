@@ -248,6 +248,13 @@ export function ApprovalPage() {
                             <Calendar className="w-3.5 h-3.5" />
                             {dayjs(approval.createdAt).format('YYYY-MM-DD HH:mm')}
                           </span>
+                          <span className="flex items-center gap-1">
+                            <User className="w-3.5 h-3.5" />
+                            {approval.escalated
+                              ? `${approval.approverName}（${approval.level === 'hr_manager' ? 'HR经理复核' : '主管审批'}）`
+                              : `${approval.approverName}（${approval.level === 'hr_manager' ? 'HR经理' : '主管'}）`
+                            }
+                          </span>
                         </div>
                         {approval.status === 'pending' && (
                           <div className="mt-2">

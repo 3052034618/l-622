@@ -28,6 +28,27 @@ import dayjs from 'dayjs';
 
 const CHART_COLORS = ['#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
+const defaultStats = {
+  todayAppointments: 0,
+  todayCompleted: 0,
+  completionRate: 0,
+  abnormalReports: 0,
+  budgetUsed: 0,
+  budgetTotal: 0,
+  budgetProgress: 0,
+  pendingApprovals: 0,
+  notStartedCount: 0,
+  completedReports: 0,
+  abnormalCount: 0,
+  totalSpent: 0,
+  completedToday: 0,
+  inProgress: 0,
+  pending: 0,
+  budgetSpent: 0,
+  totalBudget: 0,
+  totalEmployees: 0,
+};
+
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -83,15 +104,17 @@ function StatCard({ title, value, change, icon: Icon, color, bgColor, suffix, lo
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { isEmployee, isDoctor, isHR, isAdmin } = usePermission();
-  const { 
-    stats, 
-    timeSeriesData, 
-    departmentStats, 
-    packageStats, 
+  const {
+    stats: rawStats,
+    timeSeriesData,
+    departmentStats,
+    packageStats,
     notStartedList,
     loadData,
     isLoading
   } = useDashboardStore();
+
+  const stats = rawStats || defaultStats;
 
   const [lastUpdate, setLastUpdate] = useState(dayjs().format('HH:mm:ss'));
 
@@ -314,7 +337,7 @@ export function DashboardPage() {
         />
         <StatCard
           title="费用执行进度"
-          value={stats.budgetUsage || 0}
+          value={stats.budgetUsed || 0}
           icon={DollarSign}
           color="text-warning-500"
           bgColor="bg-warning-100"

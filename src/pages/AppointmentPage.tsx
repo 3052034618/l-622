@@ -69,8 +69,8 @@ export function AppointmentPage() {
     if (!user) return [];
     return packages.filter(pkg => {
       if (pkg.targetGender !== 'all' && pkg.targetGender !== user.gender) return false;
-      if (pkg.targetMinAge && user.age < pkg.targetMinAge) return false;
-      if (pkg.targetMaxAge && user.age > pkg.targetMaxAge) return false;
+      if ((pkg.targetMinAge || pkg.minAge) && user.age < (pkg.targetMinAge || pkg.minAge)!) return false;
+      if ((pkg.targetMaxAge || pkg.maxAge) && user.age > (pkg.targetMaxAge || pkg.maxAge)!) return false;
       return true;
     });
   }, [packages, user]);
@@ -104,7 +104,7 @@ export function AppointmentPage() {
   };
 
   const handleSelectSlot = (slot: TimeSlot) => {
-    if (slot.available >= slot.capacity) return;
+    if (slot.available <= 0) return;
     lockSlot(slot);
   };
 
@@ -227,7 +227,7 @@ export function AppointmentPage() {
                         <div className="space-y-2 mb-4">
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <Activity className="w-4 h-4 text-primary-500" />
-                            <span>包含 {pkg.items.filter(i => i.required).length} 项基础检查</span>
+                            <span>包含 {pkg.items.filter(i => !i.isOptional).length} 项基础检查</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <Users className="w-4 h-4 text-success-500" />
@@ -288,11 +288,11 @@ export function AppointmentPage() {
                           selectedItems.some(si => si.id === item.id)
                             ? 'border-primary-300 bg-primary-50'
                             : 'border-slate-200 bg-white',
-                          item.required && 'cursor-not-allowed'
+                          !item.isOptional && 'cursor-not-allowed'
                         )}
                       >
                         <div className="flex items-center gap-3">
-                          {item.required ? (
+                          {!item.isOptional ? (
                             <Lock className="w-4 h-4 text-slate-400" />
                           ) : (
                             <button
@@ -316,7 +316,7 @@ export function AppointmentPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-slate-900">{formatCurrency(item.price)}</p>
-                          {item.required && (
+                          {!item.isOptional && (
                             <Badge variant="secondary" size="sm" className="mt-1">必选</Badge>
                           )}
                         </div>
@@ -404,9 +404,9 @@ export function AppointmentPage() {
                   <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                     {timeSlots.map((slot) => {
                       const isLocked = lockedSlot?.id === slot.id;
-                      const isFull = slot.available >= slot.capacity;
-                      const isRecommended = !isFull && slot.recommended;
-                      const remaining = slot.capacity - slot.available;
+                      const isFull = slot.available <= 0;
+                      const isRecommended = !isFull && slot.isRecommended;
+                      const remaining = slot.available;
                       
                       return (
                         <motion.button
@@ -430,9 +430,8 @@ export function AppointmentPage() {
                             !isLocked && !isRecommended && !isFull && 'text-slate-900',
                             isFull && 'text-slate-400 line-through'
                           )}>
-                            {slot.startTime}
+                            {slot.time}
                           </p>
-                          <p className="text-xs text-slate-500">{slot.endTime}</p>
                           <div className="mt-1.5">
                             <span className={cn(
                               'text-xs font-medium',
@@ -501,9 +500,7 @@ export function AppointmentPage() {
 
                     <div className="border-t border-slate-200 pt-4">
                       <div className="space-y-2 mb-4">
-                        {selectedPackage?.items
-                          .filter(item => !item.isOptional || selectedItems.includes(item.id))
-                          .map((item) => (
+                        {selectedItems.map((item) => (
                             <div key={item.id} className="flex justify-between text-sm">
                               <span className="text-slate-600">{item.name}</span>
                               <span className="text-slate-900">{formatCurrency(item.price)}</span>

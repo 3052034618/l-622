@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Calendar, AlertTriangle, CheckCircle, Download, Eye, Search, Filter } from 'lucide-react';
+import { FileText, Calendar, AlertTriangle, CheckCircle, Download, Eye, Search } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission } from '@/hooks/usePermission';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -42,6 +42,7 @@ export function ReportListPage() {
       case 'normal': return <CheckCircle className="w-5 h-5 text-success-500" />;
       case 'abnormal': return <AlertTriangle className="w-5 h-5 text-danger-500" />;
       case 'pending': return <AlertTriangle className="w-5 h-5 text-warning-500" />;
+      case 'recheck_required': return <AlertTriangle className="w-5 h-5 text-orange-500" />;
       default: return <FileText className="w-5 h-5 text-slate-500" />;
     }
   };
@@ -51,6 +52,7 @@ export function ReportListPage() {
       case 'normal': return 'success';
       case 'abnormal': return 'danger';
       case 'pending': return 'warning';
+      case 'recheck_required': return 'warning';
       default: return 'secondary';
     }
   };
@@ -63,30 +65,32 @@ export function ReportListPage() {
           <p className="text-slate-500 mt-1">查看和管理体检报告</p>
         </div>
         {(isHR || isAdmin) && (
-          <div className="flex items-center gap-3">
-            <Input
-              placeholder="搜索姓名或报告号"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<Search className="w-4 h-4" />}
-              className="w-64"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">全部状态</option>
-              <option value="normal">正常</option>
-              <option value="abnormal">异常</option>
-              <option value="pending">待审核</option>
-            </select>
-            <Button variant="secondary">
-              <Download className="w-4 h-4 mr-2" />
-              导出报告
-            </Button>
-          </div>
+          <Button variant="secondary">
+            <Download className="w-4 h-4 mr-2" />
+            导出报告
+          </Button>
         )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="搜索姓名或报告号"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          icon={<Search className="w-4 h-4" />}
+          className="w-64"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="all">全部状态</option>
+          <option value="normal">正常</option>
+          <option value="abnormal">异常</option>
+          <option value="pending">待审核</option>
+          <option value="recheck_required">需复检</option>
+        </select>
       </div>
 
       {(isHR || isAdmin) && (

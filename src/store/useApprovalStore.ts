@@ -13,8 +13,8 @@ interface ApprovalState {
   loadAllApprovals: () => void;
   selectApproval: (id: string) => void;
   processApproval: (id: string, approved: boolean, comment: string) => Promise<{ success: boolean; message: string }>;
-  approveApproval: (id: string, comment: string) => Promise<{ success: boolean; message: string }>;
-  rejectApproval: (id: string, comment: string) => Promise<{ success: boolean; message: string }>;
+  approveApproval: (id: string, approverId: string, comment: string) => Promise<{ success: boolean; message: string }>;
+  rejectApproval: (id: string, approverId: string, comment: string) => Promise<{ success: boolean; message: string }>;
   checkAndEscalate: () => void;
   getPendingCount: () => number;
   getApprovalsByStatus: (status: ApprovalStatus) => Approval[];
@@ -129,12 +129,67 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
     return get().approvals.filter(a => a.status === 'pending' || a.status === 'escalated').length;
   },
 
-  approveApproval: async (id: string, comment: string) => {
-    return get().processApproval(id, true, comment);
+  approveApproval: async (id: string, approverId: string, comment: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const approval = get().approvals.find(a => a.id === id);
+    if (!approval) {
+      return { success: false, message: '审批记录不存在' };
+    }
+
+    const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+
+    if (approval.level === 'supervisor') {
+      const hrApproval: Approval = {
+        ...approval,
+        id: `approval-${Date.now()}`,
+        level: 'hr_manager' as ApprovalLevel,
+        approverId: 'user-201',
+        approverName: 'HR总监',
+        status: 'pending' as ApprovalStatus,
+        comment: undefined,
+        processedAt: undefined,
+        createdAt: now,
+      };
+
+      set(state => ({
+        approvals: state.approvals.map(a =>
+          a.id === id ? { ...a, status: 'approved' as ApprovalStatus, processedAt: now, comment } : a
+        ).concat(hrApproval),
+        pendingCount: state.pendingCount,
+      }));
+
+      return { success: true, message: '审批通过，已提交HR经理复核' };
+    }
+
+    set(state => ({
+      approvals: state.approvals.map(a =>
+        a.id === id ? { ...a, status: 'approved' as ApprovalStatus, processedAt: now, comment } : a
+      ),
+      pendingCount: state.pendingCount - 1,
+    }));
+
+    return { success: true, message: '审批通过' };
   },
 
-  rejectApproval: async (id: string, comment: string) => {
-    return get().processApproval(id, false, comment);
+  rejectApproval: async (id: string, approverId: string, comment: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const approval = get().approvals.find(a => a.id === id);
+    if (!approval) {
+      return { success: false, message: '审批记录不存在' };
+    }
+
+    const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+
+    set(state => ({
+      approvals: state.approvals.map(a =>
+        a.id === id ? { ...a, status: 'rejected' as ApprovalStatus, processedAt: now, comment } : a
+      ),
+      pendingCount: state.pendingCount - 1,
+    }));
+
+    return { success: true, message: '已驳回' };
   },
 
   getApprovalsByStatus: (status: ApprovalStatus) => {
