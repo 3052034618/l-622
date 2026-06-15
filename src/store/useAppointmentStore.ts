@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Package, PackageItem, TimeSlot, Appointment, User } from '@/types';
+import { Package, PackageItem, TimeSlot, Appointment, User, Approval } from '@/types';
 import { packages, getRecommendedPackages } from '@/mock/data/packages';
 import { getTimeSlots, appointments as mockAppointments, getAppointmentsByUserId } from '@/mock/data/appointments';
 import { departments } from '@/mock/data/users';
@@ -207,10 +207,53 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
       departmentName: user.departmentName,
     };
 
-    set(state => ({
-      appointments: [newAppointment, ...state.appointments],
-      currentAppointment: newAppointment,
-    }));
+    if (budgetCheck.requiresApproval) {
+      const dept = departments.find(d => d.id === user.departmentId);
+      const newApproval: Approval = {
+        id: `approval-${Date.now()}`,
+        appointmentId: newAppointment.id,
+        applicantId: user.id,
+        applicantName: user.name,
+        applicantDepartment: user.departmentName,
+        approverId: dept?.managerId || '',
+        approverName: dept?.managerName || '',
+        packageName: selectedPackage.name,
+        itemCount: selectedItems.length,
+        exceedAmount: budgetCheck.exceedAmount,
+        departmentName: user.departmentName,
+        level: 'supervisor',
+        status: 'pending',
+        amount: totalPrice,
+        budgetExceed: budgetCheck.exceedAmount,
+        departmentBudget: dept?.budget || 0,
+        departmentUsed: dept?.usedBudget || 0,
+        createdAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+        escalated: false,
+      };
+
+      set(state => ({
+        appointments: [newAppointment, ...state.appointments],
+        currentAppointment: newAppointment,
+      }));
+
+      try {
+        const { useApprovalStore } = await import('@/store/useApprovalStore');
+        const approvalStore = useApprovalStore.getState();
+        approvalStore.approvals.push(newApproval);
+        set(state => ({}));
+        useApprovalStore.setState(state => ({
+          approvals: [...state.approvals, newApproval],
+          pendingCount: state.pendingCount + 1,
+        }));
+      } catch (e) {
+        console.error('Failed to create approval record:', e);
+      }
+    } else {
+      set(state => ({
+        appointments: [newAppointment, ...state.appointments],
+        currentAppointment: newAppointment,
+      }));
+    }
 
     get().releaseSlot();
     get().resetSelection();
@@ -222,8 +265,16 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
   },
 
   loadUserAppointments: (userId: string) => {
-    const userAppts = getAppointmentsByUserId(userId);
-    set({ appointments: userAppts });
+    const mockAppts = getAppointmentsByUserId(userId);
+    const stateAppts = get().appointments.filter(a => a.userId === userId);
+    const mergedMap = new Map<string, Appointment>();
+    [...stateAppts, ...mockAppts].forEach(apt => {
+      if (!mergedMap.has(apt.id)) {
+        mergedMap.set(apt.id, apt);
+      }
+    });
+    const merged = Array.from(mergedMap.values());
+    set({ appointments: merged });
   },
 
   setCountdown: (value: number) => {

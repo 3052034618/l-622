@@ -5,32 +5,71 @@ import { reports, getAbnormalReportsCount } from './reports';
 import { getPendingApprovalsCount } from './approvals';
 import dayjs from 'dayjs';
 
-export const getDashboardStats = (): DashboardStats => {
-  const today = dayjs().format('YYYY-MM-DD');
-  const todayAppts = appointments.filter(a => a.appointmentDate === today);
+export interface FilterParams {
+  departmentId?: string;
+  packageId?: string;
+  date?: string;
+}
+
+export interface NotStartedEmployee {
+  id: string;
+  name: string;
+  department: string;
+  departmentName: string;
+  employeeNo: string;
+  gender: 'male' | 'female';
+  age: number;
+  recommendedPackage: string;
+  estimatedCost: number;
+}
+
+export const getDashboardStats = (filters?: FilterParams): DashboardStats => {
+  const targetDate = filters?.date || dayjs().format('YYYY-MM-DD');
+  
+  let filteredAppts = appointments;
+  if (filters?.departmentId) {
+    filteredAppts = filteredAppts.filter(a => a.departmentId === filters.departmentId);
+  }
+  if (filters?.packageId) {
+    filteredAppts = filteredAppts.filter(a => a.packageId === filters.packageId);
+  }
+
+  const todayAppts = filteredAppts.filter(a => a.appointmentDate === targetDate);
   const todayCompleted = todayAppts.filter(a => a.status === 'completed');
   
-  const totalBudget = departments.reduce((sum, d) => sum + d.budget, 0);
-  const totalUsed = departments.reduce((sum, d) => sum + d.usedBudget, 0);
+  let filteredDepts = departments;
+  if (filters?.departmentId) {
+    filteredDepts = filteredDepts.filter(d => d.id === filters.departmentId);
+  }
   
-  const totalEmployees = departments.reduce((sum, d) => sum + d.employeeCount, 0);
-  const completedCount = appointments.filter(a => a.status === 'completed').length;
-  const notStarted = totalEmployees - appointments.length;
-  const inProgress = appointments.filter(a => a.status === 'confirmed').length;
-  const pending = appointments.filter(a => a.status === 'pending').length;
+  const totalBudget = filteredDepts.reduce((sum, d) => sum + d.budget, 0);
+  const totalUsed = filteredDepts.reduce((sum, d) => sum + d.usedBudget, 0);
+  
+  const totalEmployees = filteredDepts.reduce((sum, d) => sum + d.employeeCount, 0);
+  const completedCount = filteredAppts.filter(a => a.status === 'completed').length;
+  const notStarted = Math.max(0, totalEmployees - filteredAppts.length);
+  const inProgress = filteredAppts.filter(a => a.status === 'confirmed').length;
+  const pending = filteredAppts.filter(a => a.status === 'pending').length;
+  
+  const abnormalCount = filters?.departmentId 
+    ? reports.filter(r => {
+        const appt = appointments.find(a => a.id === r.appointmentId);
+        return appt?.departmentId === filters.departmentId && r.status === 'abnormal';
+      }).length
+    : getAbnormalReportsCount();
 
   return {
     todayAppointments: todayAppts.length,
     todayCompleted: todayCompleted.length,
     completionRate: todayAppts.length > 0 ? Math.round((todayCompleted.length / todayAppts.length) * 100) : 0,
-    abnormalReports: getAbnormalReportsCount(),
+    abnormalReports: abnormalCount,
     budgetUsed: totalUsed,
     budgetTotal: totalBudget,
-    budgetProgress: Math.round((totalUsed / totalBudget) * 100),
+    budgetProgress: totalBudget > 0 ? Math.round((totalUsed / totalBudget) * 100) : 0,
     pendingApprovals: getPendingApprovalsCount(),
     notStartedCount: notStarted,
     completedReports: completedCount,
-    abnormalCount: getAbnormalReportsCount(),
+    abnormalCount,
     totalSpent: totalUsed,
     completedToday: todayCompleted.length,
     inProgress,
@@ -41,12 +80,20 @@ export const getDashboardStats = (): DashboardStats => {
   };
 };
 
-export const getDepartmentStats = (): DepartmentStats[] => {
-  return departments.map(dept => {
-    const deptAppts = appointments.filter(a => a.departmentId === dept.id);
+export const getDepartmentStats = (filters?: FilterParams): DepartmentStats[] => {
+  let filteredDepts = departments;
+  if (filters?.departmentId) {
+    filteredDepts = filteredDepts.filter(d => d.id === filters.departmentId);
+  }
+  
+  return filteredDepts.map(dept => {
+    let deptAppts = appointments.filter(a => a.departmentId === dept.id);
+    if (filters?.packageId) {
+      deptAppts = deptAppts.filter(a => a.packageId === filters.packageId);
+    }
     const completedCount = deptAppts.filter(a => a.status === 'completed').length;
     const pendingCount = deptAppts.filter(a => a.status === 'confirmed' || a.status === 'pending').length;
-    const notStartedCount = dept.employeeCount - deptAppts.length;
+    const notStartedCount = Math.max(0, dept.employeeCount - deptAppts.length);
     const deptReports = reports.filter(r => {
       const appt = appointments.find(a => a.id === r.appointmentId);
       return appt?.departmentId === dept.id && r.status === 'abnormal';
@@ -82,21 +129,45 @@ export const generateTimeSeriesData = (days: number = 7): TimeSeriesData[] => {
   return data;
 };
 
-export const getNotStartedEmployees = () => {
-  const allEmployeeIds = new Set(appointments.map(a => a.userId));
-  const notStarted = [
+export const getNotStartedEmployees = (filters?: FilterParams) => {
+  let filteredAppts = appointments;
+  if (filters?.departmentId) {
+    filteredAppts = filteredAppts.filter(a => a.departmentId === filters.departmentId);
+  }
+  if (filters?.packageId) {
+    filteredAppts = filteredAppts.filter(a => a.packageId === filters.packageId);
+  }
+  
+  const allEmployeeIds = new Set(filteredAppts.map(a => a.userId));
+  const notStarted: NotStartedEmployee[] = [
     { id: 'user-011', name: '孙七', department: '技术研发部', departmentName: '技术研发部', employeeNo: 'EMP2023011', gender: 'male', age: 26, recommendedPackage: '基础体检套餐A', estimatedCost: 880 },
     { id: 'user-012', name: '周八', department: '技术研发部', departmentName: '技术研发部', employeeNo: 'EMP2023012', gender: 'female', age: 30, recommendedPackage: '标准体检套餐B', estimatedCost: 1680 },
     { id: 'user-013', name: '吴九', department: '市场营销部', departmentName: '市场营销部', employeeNo: 'EMP2023013', gender: 'male', age: 35, recommendedPackage: '标准体检套餐B', estimatedCost: 1680 },
     { id: 'user-014', name: '郑十', department: '财务部', departmentName: '财务部', employeeNo: 'EMP2022010', gender: 'female', age: 42, recommendedPackage: '精英体检套餐C', estimatedCost: 3280 },
     { id: 'user-015', name: '冯十一', department: '运营部', departmentName: '运营部', employeeNo: 'EMP2022011', gender: 'male', age: 28, recommendedPackage: '基础体检套餐A', estimatedCost: 880 },
   ];
-  return notStarted.filter(e => !allEmployeeIds.has(e.id));
+  
+  let result = notStarted.filter(e => !allEmployeeIds.has(e.id));
+  if (filters?.departmentId) {
+    result = result.filter(e => {
+      const dept = departments.find(d => d.id === filters.departmentId);
+      return dept ? e.departmentName === dept.name : true;
+    });
+  }
+  return result;
 };
 
-export const getPackageStats = (): PackageStats[] => {
+export const getPackageStats = (filters?: FilterParams): PackageStats[] => {
+  let filteredAppts = appointments;
+  if (filters?.departmentId) {
+    filteredAppts = filteredAppts.filter(a => a.departmentId === filters.departmentId);
+  }
+  if (filters?.packageId) {
+    filteredAppts = filteredAppts.filter(a => a.packageId === filters.packageId);
+  }
+  
   const packageCounts: Record<string, PackageStats> = {};
-  appointments.forEach(appt => {
+  filteredAppts.forEach(appt => {
     if (!packageCounts[appt.packageId]) {
       packageCounts[appt.packageId] = { 
         packageId: appt.packageId, 

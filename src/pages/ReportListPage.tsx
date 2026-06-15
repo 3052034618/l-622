@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Calendar, AlertTriangle, CheckCircle, Download, Eye, Search } from 'lucide-react';
+import { FileText, Calendar, AlertTriangle, AlertCircle, CheckCircle, Download, Eye, Search } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission } from '@/hooks/usePermission';
+import { useReportStore } from '@/store/useReportStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -10,28 +11,29 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { cn, formatCurrency, getStatusText } from '@/utils';
 import { Report } from '@/types';
-import { reports } from '@/mock/data/reports';
 import dayjs from 'dayjs';
 
 export function ReportListPage() {
   const { user } = useAuthStore();
   const { isEmployee, isDoctor, isHR, isAdmin } = usePermission();
-  const [reportList, setReportList] = useState<Report[]>([]);
+  const { reports, loadUserReports, loadDoctorReports, loadAllReports, loading } = useReportStore();
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     if (user) {
-      let filtered = reports;
       if (isEmployee) {
-        filtered = reports.filter(r => r.userId === user.id);
+        loadUserReports(user.id);
+      } else if (isDoctor) {
+        loadDoctorReports(user.id);
+      } else if (isHR || isAdmin) {
+        loadAllReports();
       }
-      setReportList(filtered);
     }
-  }, [user, isEmployee]);
+  }, [user, isEmployee, isDoctor, isHR, isAdmin, loadUserReports, loadDoctorReports, loadAllReports]);
 
-  const filteredReports = reportList.filter(report => {
+  const filteredReports = reports.filter(report => {
     const matchesSearch = report.patientName.includes(searchTerm) || report.reportNo.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -40,7 +42,7 @@ export function ReportListPage() {
   const getStatusIcon = (status: Report['status']) => {
     switch (status) {
       case 'normal': return <CheckCircle className="w-5 h-5 text-success-500" />;
-      case 'abnormal': return <AlertTriangle className="w-5 h-5 text-danger-500" />;
+      case 'abnormal': return <AlertCircle className="w-5 h-5 text-danger-500" />;
       case 'pending': return <AlertTriangle className="w-5 h-5 text-warning-500" />;
       case 'recheck_required': return <AlertTriangle className="w-5 h-5 text-orange-500" />;
       default: return <FileText className="w-5 h-5 text-slate-500" />;
@@ -104,7 +106,7 @@ export function ReportListPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">总报告数</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{reportList.length}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{reports.length}</p>
                   </div>
                   <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
                     <FileText className="w-6 h-6 text-primary-500" />
@@ -124,7 +126,7 @@ export function ReportListPage() {
                   <div>
                     <p className="text-sm text-slate-500">正常</p>
                     <p className="text-2xl font-bold text-success-600 mt-1">
-                      {reportList.filter(r => r.status === 'normal').length}
+                      {reports.filter(r => r.status === 'normal').length}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-success-100 rounded-xl flex items-center justify-center">
@@ -145,7 +147,7 @@ export function ReportListPage() {
                   <div>
                     <p className="text-sm text-slate-500">异常</p>
                     <p className="text-2xl font-bold text-danger-600 mt-1">
-                      {reportList.filter(r => r.status === 'abnormal').length}
+                      {reports.filter(r => r.status === 'abnormal').length}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-danger-100 rounded-xl flex items-center justify-center">
@@ -166,7 +168,7 @@ export function ReportListPage() {
                   <div>
                     <p className="text-sm text-slate-500">待审核</p>
                     <p className="text-2xl font-bold text-warning-600 mt-1">
-                      {reportList.filter(r => r.status === 'pending').length}
+                      {reports.filter(r => r.status === 'pending').length}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-warning-100 rounded-xl flex items-center justify-center">
@@ -217,6 +219,12 @@ export function ReportListPage() {
                     <div className="flex items-center gap-2 text-sm text-danger-600">
                       <AlertTriangle className="w-4 h-4" />
                       <span>异常指标: {report.abnormalItems.length} 项</span>
+                    </div>
+                  )}
+                  {(report.status === 'abnormal' || report.status === 'recheck_required') && (
+                    <div className="flex items-center gap-2 text-xs text-danger-600">
+                      <AlertCircle className="w-3 h-3" />
+                      <span>有异常指标，请关注复检安排</span>
                     </div>
                   )}
                 </div>

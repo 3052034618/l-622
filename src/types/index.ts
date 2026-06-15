@@ -67,6 +67,8 @@ export interface Appointment {
   lockedAt?: string;
   lockedExpireAt?: string;
   totalPrice: number;
+  totalAmount?: number;
+  location?: string;
   selectedItems: string[];
   isWaived: boolean;
   createdAt: string;

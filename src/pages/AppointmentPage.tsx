@@ -19,6 +19,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useAppointmentStore } from '@/store/useAppointmentStore';
+import { departments } from '@/mock/data/users';
 import { useCountdown } from '@/hooks/useCountdown';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -131,6 +132,25 @@ export function AppointmentPage() {
   };
 
   const budgetCheck = user ? validateBudget(user.departmentId) : { withinBudget: true, exceedAmount: 0, requiresApproval: false };
+
+  const dept = user ? departments.find(d => d.id === user.departmentId) : null;
+  const budgetProgress = dept ? Math.min(100, Math.round((dept.usedBudget + totalPrice) / dept.budget * 100)) : 0;
+
+  const handleSubmitApproval = async () => {
+    if (!user || !lockedSlot || !selectedPackage) return;
+
+    const currentBudgetCheck = validateBudget(user.departmentId);
+    setSubmitting(true);
+    try {
+      const result = await confirmAppointment(user, selectedItems, currentBudgetCheck);
+      if (result.success) {
+        setShowConfirmModal(false);
+        navigate('/appointment/history');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -489,7 +509,7 @@ export function AppointmentPage() {
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-500">预约时段</span>
                         <span className="font-medium text-slate-900">
-                          {lockedSlot ? `${lockedSlot.startTime} - ${lockedSlot.endTime}` : '未选择'}
+                          {lockedSlot ? lockedSlot.time : '未选择'}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -527,7 +547,7 @@ export function AppointmentPage() {
                           </span>
                         </div>
                         <Progress 
-                          value={75} 
+                          value={budgetProgress} 
                           max={100} 
                           variant={budgetCheck.withinBudget ? 'success' : 'danger'}
                         />
@@ -608,8 +628,8 @@ export function AppointmentPage() {
             <Button variant="secondary" onClick={() => setShowConfirmModal(false)}>
               取消
             </Button>
-            <Button loading={submitting} onClick={handleConfirm}>
-              确认提交
+            <Button loading={submitting} onClick={handleSubmitApproval}>
+              确认并提交审批
             </Button>
           </div>
         }

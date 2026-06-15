@@ -12,6 +12,7 @@ interface ReportState {
   
   loadUserReports: (userId: string) => void;
   loadDoctorReports: (doctorId: string) => void;
+  loadAllReports: () => void;
   selectReport: (id: string) => void;
   createDraft: (appointment: Appointment, user: User) => void;
   updateDraftItem: (itemId: string, value: string, isAbnormal: boolean, abnormalType?: 'high' | 'low') => void;
@@ -57,13 +58,82 @@ export const useReportStore = create<ReportState>((set, get) => ({
   validationErrors: [],
 
   loadUserReports: (userId: string) => {
-    const userReports = getReportsByUserId(userId);
-    set({ reports: userReports });
+    set({ loading: true });
+    const mockReports = getReportsByUserId(userId);
+    const stateReports = get().reports;
+    const userStateReports = stateReports.filter(r => r.userId === userId);
+    
+    const idSet = new Set<string>();
+    const merged: Report[] = [];
+    
+    for (const r of userStateReports) {
+      if (!idSet.has(r.id)) {
+        idSet.add(r.id);
+        merged.push(r);
+      }
+    }
+    for (const r of mockReports) {
+      if (!idSet.has(r.id)) {
+        idSet.add(r.id);
+        merged.push(r);
+      }
+    }
+    
+    merged.sort((a, b) => (b.createdAt || b.verifiedAt).localeCompare(a.createdAt || a.verifiedAt));
+    
+    set({ reports: merged, loading: false });
   },
 
   loadDoctorReports: (doctorId: string) => {
-    const doctorReports = getReportsByDoctorId(doctorId);
-    set({ reports: doctorReports });
+    set({ loading: true });
+    const mockReports = getReportsByDoctorId(doctorId);
+    const stateReports = get().reports;
+    const doctorStateReports = stateReports.filter(r => r.doctorId === doctorId);
+    
+    const idSet = new Set<string>();
+    const merged: Report[] = [];
+    
+    for (const r of doctorStateReports) {
+      if (!idSet.has(r.id)) {
+        idSet.add(r.id);
+        merged.push(r);
+      }
+    }
+    for (const r of mockReports) {
+      if (!idSet.has(r.id)) {
+        idSet.add(r.id);
+        merged.push(r);
+      }
+    }
+    
+    merged.sort((a, b) => (b.createdAt || b.verifiedAt).localeCompare(a.createdAt || a.verifiedAt));
+    
+    set({ reports: merged, loading: false });
+  },
+
+  loadAllReports: () => {
+    set({ loading: true });
+    const stateReports = get().reports;
+    
+    const idSet = new Set<string>();
+    const merged: Report[] = [];
+    
+    for (const r of stateReports) {
+      if (!idSet.has(r.id)) {
+        idSet.add(r.id);
+        merged.push(r);
+      }
+    }
+    for (const r of reports) {
+      if (!idSet.has(r.id)) {
+        idSet.add(r.id);
+        merged.push(r);
+      }
+    }
+    
+    merged.sort((a, b) => (b.createdAt || b.verifiedAt).localeCompare(a.createdAt || a.verifiedAt));
+    
+    set({ reports: merged, loading: false });
   },
 
   selectReport: (id: string) => {

@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   CheckCircle,
   DollarSign,
-  Filter
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
 import { exportMonthlyReport, exportNotStartedList } from '@/utils/excel';
 import { cn, formatCurrency } from '@/utils';
+import { packages } from '@/mock/data/packages';
 import dayjs from 'dayjs';
 
 const CHART_COLORS = ['#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -64,11 +66,17 @@ export function StatisticsPage() {
   const stats = rawStats || defaultStats;
 
   const [selectedMonth, setSelectedMonth] = useState(dayjs().format('YYYY-MM'));
-  const [selectedDept, setSelectedDept] = useState<string>('all');
+  const [selectedDept, setSelectedDept] = useState<string>('');
+  const [selectedPackage, setSelectedPackage] = useState<string>('');
+
+  const budgetPercent = Math.min(100, Math.round(((stats.budgetUsed || 0) / (stats.budgetTotal || 1)) * 100));
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData({
+      departmentId: selectedDept || undefined,
+      packageId: selectedPackage || undefined,
+    });
+  }, [loadData, selectedDept, selectedPackage]);
 
   const handleExportMonthly = () => {
     exportMonthlyReport(departmentStats, packageStats, selectedMonth);
@@ -78,18 +86,21 @@ export function StatisticsPage() {
     exportNotStartedList(notStartedList);
   };
 
-  const filteredDeptStats = selectedDept === 'all' 
-    ? departmentStats 
-    : departmentStats.filter(d => d.departmentId === selectedDept);
+  const handleResetFilters = () => {
+    setSelectedDept('');
+    setSelectedPackage('');
+  };
+
+  const filteredDeptStats = departmentStats;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">统计报表</h1>
           <p className="text-slate-500 mt-1">查看部门体检完成率、费用统计和趋势分析</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-slate-400" />
             <input
@@ -103,11 +114,25 @@ export function StatisticsPage() {
               onChange={(e) => setSelectedDept(e.target.value)}
               className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="all">全部部门</option>
+              <option value="">全部部门</option>
               {departments.map(dept => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </select>
+            <select
+              value={selectedPackage}
+              onChange={(e) => setSelectedPackage(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">全部套餐</option>
+              {packages.map(pkg => (
+                <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+              ))}
+            </select>
+            <Button variant="secondary" size="sm" onClick={handleResetFilters}>
+              <RotateCcw className="w-4 h-4 mr-1" />
+              重置
+            </Button>
           </div>
           <Button variant="secondary" onClick={handleExportNotStarted}>
             <FileText className="w-4 h-4 mr-2" />
@@ -204,8 +229,11 @@ export function StatisticsPage() {
                   <DollarSign className="w-6 h-6 text-warning-500" />
                 </div>
               </div>
-              <div className="mt-3 text-xs text-slate-500">
-                预算执行率: {stats.budgetUsed || 0}%
+              <div className="mt-3">
+                <Progress value={budgetPercent} max={100} variant={budgetPercent > 90 ? 'danger' : budgetPercent > 70 ? 'warning' : 'primary'} />
+                <p className="mt-1 text-xs text-slate-500">
+                  预算执行: {formatCurrency(stats.budgetUsed || 0)} / {formatCurrency(stats.budgetTotal || 0)} ({budgetPercent}%)
+                </p>
               </div>
             </CardContent>
           </Card>

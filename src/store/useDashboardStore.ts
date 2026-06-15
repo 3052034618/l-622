@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import { DashboardStats, DepartmentStats, TimeSeriesData, PackageStats, Department } from '@/types';
-import { getDashboardStats, getDepartmentStats, generateTimeSeriesData, getNotStartedEmployees, getPackageStats } from '@/mock/data/statistics';
+import { getDashboardStats, getDepartmentStats, generateTimeSeriesData, getNotStartedEmployees, getPackageStats, FilterParams, NotStartedEmployee } from '@/mock/data/statistics';
 import { departments } from '@/mock/data/users';
 
 interface DashboardState {
   stats: DashboardStats | null;
   departmentStats: DepartmentStats[];
   timeSeriesData: TimeSeriesData[];
-  notStartedEmployees: { id: string; name: string; department: string; employeeNo: string }[];
-  notStartedList: { id: string; name: string; department: string; employeeNo: string }[];
+  notStartedEmployees: NotStartedEmployee[];
+  notStartedList: NotStartedEmployee[];
   packageStats: PackageStats[];
   departments: Department[];
   filters: {
@@ -20,8 +20,8 @@ interface DashboardState {
   isLoading: boolean;
   lastUpdated: string | null;
   
-  loadDashboardData: () => Promise<void>;
-  loadData: () => Promise<void>;
+  loadDashboardData: (filters?: FilterParams) => Promise<void>;
+  loadData: (filters?: FilterParams) => Promise<void>;
   refreshData: () => Promise<void>;
   setFilter: (key: keyof DashboardState['filters'], value: string | null) => void;
   resetFilters: () => void;
@@ -44,15 +44,24 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   isLoading: false,
   lastUpdated: null,
 
-  loadDashboardData: async () => {
+  loadDashboardData: async (filters?: FilterParams) => {
     set({ loading: true, isLoading: true });
     await new Promise(resolve => setTimeout(resolve, 600));
     
-    const stats = getDashboardStats();
-    const deptStats = getDepartmentStats();
+    const mergedFilters: FilterParams = {
+      departmentId: filters?.departmentId || get().filters.departmentId || undefined,
+      packageId: filters?.packageId || get().filters.packageId || undefined,
+      date: filters?.date,
+    };
+    
+    if (mergedFilters.departmentId === '') mergedFilters.departmentId = undefined;
+    if (mergedFilters.packageId === '') mergedFilters.packageId = undefined;
+    
+    const stats = getDashboardStats(mergedFilters);
+    const deptStats = getDepartmentStats(mergedFilters);
     const timeData = generateTimeSeriesData(7);
-    const notStarted = getNotStartedEmployees();
-    const pkgStats = getPackageStats();
+    const notStarted = getNotStartedEmployees(mergedFilters);
+    const pkgStats = getPackageStats(mergedFilters);
     
     set({
       stats,
@@ -67,8 +76,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     });
   },
 
-  loadData: async () => {
-    return get().loadDashboardData();
+  loadData: async (filters?: FilterParams) => {
+    return get().loadDashboardData(filters);
   },
 
   refreshData: async () => {

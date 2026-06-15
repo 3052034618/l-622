@@ -40,7 +40,7 @@ export function ApprovalPage() {
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [comment, setComment] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected' | 'escalated'>('pending');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'escalated'>('pending');
 
   useEffect(() => {
     if (user) {
@@ -50,6 +50,7 @@ export function ApprovalPage() {
   }, [user, loadApprovals, checkAndEscalate]);
 
   const filteredApprovals = approvals.filter(a => {
+    if (activeTab === 'all') return true;
     if (activeTab === 'pending') return a.status === 'pending';
     if (activeTab === 'approved') return a.status === 'approved';
     if (activeTab === 'rejected') return a.status === 'rejected';
@@ -167,7 +168,7 @@ export function ApprovalPage() {
       </div>
 
       <div className="flex gap-2 border-b border-slate-200">
-        {(['pending', 'approved', 'rejected', 'escalated'] as const).map(tab => (
+        {(['all', 'pending', 'approved', 'rejected', 'escalated'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -178,7 +179,8 @@ export function ApprovalPage() {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             )}
           >
-            {tab === 'pending' && '待审批'}
+            {tab === 'all' && '所有'}
+            {tab === 'pending' && '待我审批'}
             {tab === 'approved' && '已通过'}
             {tab === 'rejected' && '已驳回'}
             {tab === 'escalated' && '已越级'}
@@ -191,7 +193,7 @@ export function ApprovalPage() {
           {filteredApprovals.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">暂无{activeTab === 'pending' ? '待处理' : activeTab === 'approved' ? '已通过' : activeTab === 'rejected' ? '已驳回' : '已越级'}的审批</p>
+              <p className="text-slate-500">暂无{activeTab === 'all' ? '' : activeTab === 'pending' ? '待处理' : activeTab === 'approved' ? '已通过' : activeTab === 'rejected' ? '已驳回' : '已越级'}的审批</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
@@ -226,7 +228,7 @@ export function ApprovalPage() {
                             {getStatusText(approval.status)}
                           </Badge>
                           {approval.escalated && (
-                            <Badge variant="primary" size="sm" className="gap-1">
+                            <Badge variant="danger" size="sm" className="gap-1 bg-danger-50 text-danger-700 border-danger-200">
                               <ArrowUpCircle className="w-3 h-3" />
                               已越级
                             </Badge>
@@ -235,7 +237,7 @@ export function ApprovalPage() {
                         <p className="text-sm text-slate-500 mt-0.5">
                           {approval.packageName} · {approval.itemCount} 项检查
                         </p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
+                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600 flex-wrap">
                           <span className="flex items-center gap-1">
                             <DollarSign className="w-3.5 h-3.5" />
                             申请金额: <span className="font-medium text-danger-600">{formatCurrency(approval.amount)}</span>
@@ -265,6 +267,33 @@ export function ApprovalPage() {
                               <ClockIcon className="w-3 h-3" />
                               {timeInfo.text}
                             </span>
+                          </div>
+                        )}
+                        {approval.escalated && approval.escalationReason && (
+                          <div className="mt-2 p-2 bg-danger-50 border border-danger-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-danger-500 flex-shrink-0 mt-0.5" />
+                              <p className="text-xs text-danger-700">{approval.escalationReason}</p>
+                            </div>
+                          </div>
+                        )}
+                        {(approval.status === 'approved' || approval.status === 'rejected') && approval.comment && (
+                          <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <MessageSquare className={cn(
+                                'w-4 h-4 flex-shrink-0 mt-0.5',
+                                approval.status === 'approved' ? 'text-success-500' : 'text-danger-500'
+                              )} />
+                              <div>
+                                <p className={cn(
+                                  'text-xs font-medium',
+                                  approval.status === 'approved' ? 'text-success-700' : 'text-danger-700'
+                                )}>
+                                  {approval.status === 'approved' ? '通过意见' : '驳回原因'}
+                                </p>
+                                <p className="text-xs text-slate-600 mt-0.5">{approval.comment}</p>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, FileText, MapPin, QrCode, CheckCircle, XCircle, AlertCircle, Clock as ClockIcon } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useAppointmentStore } from '@/store/useAppointmentStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -9,19 +10,20 @@ import { Modal } from '@/components/ui/Modal';
 import { getStatusColor, getStatusText, formatCurrency } from '@/utils';
 import { Appointment } from '@/types';
 import dayjs from 'dayjs';
-import { appointments } from '@/mock/data/appointments';
 
 export function AppointmentHistoryPage() {
   const { user } = useAuthStore();
-  const [userAppointments, setUserAppointments] = useState<Appointment[]>([]);
+  const { appointments, loadUserAppointments } = useAppointmentStore();
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
 
   useEffect(() => {
     if (user) {
-      setUserAppointments(appointments.filter(a => a.userId === user.id));
+      loadUserAppointments(user.id);
     }
-  }, [user]);
+  }, [user, loadUserAppointments]);
+
+  const userAppointments = appointments.filter(a => a.userId === user?.id);
 
   const getStatusIcon = (status: Appointment['status']) => {
     switch (status) {
@@ -88,7 +90,7 @@ export function AppointmentHistoryPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                       <MapPin className="w-4 h-4 text-slate-400" />
-                      <span>体检中心A区 {apt.location}</span>
+                      <span>体检中心A区</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                       <FileText className="w-4 h-4 text-slate-400" />
@@ -97,7 +99,7 @@ export function AppointmentHistoryPage() {
                   </div>
 
                   <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                    <span className="text-lg font-bold text-primary-600">{formatCurrency(apt.totalAmount)}</span>
+                    <span className="text-lg font-bold text-primary-600">{formatCurrency(apt.totalPrice)}</span>
                     <div className="flex gap-2">
                       {apt.status === 'confirmed' && (
                         <Button
@@ -149,7 +151,7 @@ export function AppointmentHistoryPage() {
               </div>
               <div className="p-4 bg-slate-50 rounded-lg">
                 <p className="text-sm text-slate-500 mb-1">费用</p>
-                <p className="font-semibold text-primary-600">{formatCurrency(selectedAppointment.totalAmount)}</p>
+                <p className="font-semibold text-primary-600">{formatCurrency(selectedAppointment.totalPrice)}</p>
               </div>
             </div>
 

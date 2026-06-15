@@ -12,7 +12,9 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { useDashboardStore } from '@/store/useDashboardStore';
@@ -24,6 +26,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
 import { Button } from '@/components/ui/Button';
 import { formatCurrency, cn, getStatusText } from '@/utils';
+import { packages } from '@/mock/data/packages';
 import dayjs from 'dayjs';
 
 const CHART_COLORS = ['#0EA5E9', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -111,24 +114,44 @@ export function DashboardPage() {
     packageStats,
     notStartedList,
     loadData,
+    departments,
     isLoading
   } = useDashboardStore();
 
   const stats = rawStats || defaultStats;
 
   const [lastUpdate, setLastUpdate] = useState(dayjs().format('HH:mm:ss'));
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedPackage, setSelectedPackage] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
+
+  const budgetPercent = Math.min(100, Math.round(((stats.budgetUsed || 0) / (stats.budgetTotal || 1)) * 100));
 
   useRealtime({
     interval: 10000,
     onRefresh: async () => {
-      await loadData();
+      await loadData({
+        departmentId: selectedDepartment || undefined,
+        packageId: selectedPackage || undefined,
+        date: selectedDate,
+      });
       setLastUpdate(dayjs().format('HH:mm:ss'));
     },
   });
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData({
+      departmentId: selectedDepartment || undefined,
+      packageId: selectedPackage || undefined,
+      date: selectedDate,
+    });
+  }, [loadData, selectedDepartment, selectedPackage, selectedDate]);
+
+  const handleResetFilters = () => {
+    setSelectedDepartment('');
+    setSelectedPackage('');
+    setSelectedDate(dayjs().format('YYYY-MM-DD'));
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -291,12 +314,45 @@ export function DashboardPage() {
       animate="show"
       className="space-y-6"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">实时数据大屏</h1>
           <p className="text-slate-500 mt-1">今日预约 · 完成率 · 异常报告 · 费用执行</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <select
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">全部部门</option>
+              {departments.map(dept => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
+            <select
+              value={selectedPackage}
+              onChange={(e) => setSelectedPackage(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">全部套餐</option>
+              {packages.map(pkg => (
+                <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
+              ))}
+            </select>
+            <Button variant="secondary" size="sm" onClick={handleResetFilters}>
+              <RotateCcw className="w-4 h-4 mr-1" />
+              重置
+            </Button>
+          </div>
           <Badge variant="success" dot>
             实时更新中
           </Badge>
@@ -337,7 +393,7 @@ export function DashboardPage() {
         />
         <StatCard
           title="费用执行进度"
-          value={stats.budgetUsed || 0}
+          value={budgetPercent}
           icon={DollarSign}
           color="text-warning-500"
           bgColor="bg-warning-100"
@@ -353,11 +409,11 @@ export function DashboardPage() {
               <div>
                 <p className="text-sm text-slate-500 mb-2">预算执行</p>
                 <Progress
-                  value={stats.budgetUsed || 0}
+                  value={budgetPercent}
                   max={100}
-                  variant={stats.budgetUsed > 90 ? 'danger' : stats.budgetUsed > 70 ? 'warning' : 'primary'}
+                  variant={budgetPercent > 90 ? 'danger' : budgetPercent > 70 ? 'warning' : 'primary'}
                   showLabel
-                  label={`已使用 ${formatCurrency(stats.budgetSpent || 0)} / ${formatCurrency(stats.totalBudget || 0)}`}
+                  label={`已使用 ${formatCurrency(stats.budgetSpent || 0)} / ${formatCurrency(stats.totalBudget || 0)} (${budgetPercent}%)`}
                 />
               </div>
               <div>

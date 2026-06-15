@@ -27,10 +27,26 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
   selectedApproval: null,
 
   loadApprovals: (approverId: string) => {
-    const userApprovals = getApprovalsByApproverId(approverId);
-    set({ 
-      approvals: userApprovals,
-      pendingCount: userApprovals.filter(a => a.status === 'pending' || a.status === 'escalated').length
+    const mockUserApprovals = approvals.filter(a =>
+      a.approverId === approverId || (a.escalated && a.level === 'hr_manager')
+    );
+
+    const stateApprovals = get().approvals;
+
+    const existingIds = new Set(stateApprovals.map(a => a.id));
+    const newMockApprovals = mockUserApprovals.filter(a => !existingIds.has(a.id));
+
+    const merged = [...stateApprovals, ...newMockApprovals].sort((a, b) => {
+      const aIsNew = a.id.startsWith('approval-') && !a.id.startsWith('approval-0');
+      const bIsNew = b.id.startsWith('approval-') && !b.id.startsWith('approval-0');
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+      return dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf();
+    });
+
+    set({
+      approvals: merged,
+      pendingCount: merged.filter(a => a.status === 'pending' || a.status === 'escalated').length
     });
   },
 
