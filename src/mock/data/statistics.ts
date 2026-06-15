@@ -33,6 +33,9 @@ export const getDashboardStats = (filters?: FilterParams): DashboardStats => {
   if (filters?.packageId) {
     filteredAppts = filteredAppts.filter(a => a.packageId === filters.packageId);
   }
+  if (filters?.date) {
+    filteredAppts = filteredAppts.filter(a => a.appointmentDate === filters.date);
+  }
 
   const todayAppts = filteredAppts.filter(a => a.appointmentDate === targetDate);
   const todayCompleted = todayAppts.filter(a => a.status === 'completed');
@@ -43,7 +46,7 @@ export const getDashboardStats = (filters?: FilterParams): DashboardStats => {
   }
   
   const totalBudget = filteredDepts.reduce((sum, d) => sum + d.budget, 0);
-  const totalUsed = filteredDepts.reduce((sum, d) => sum + d.usedBudget, 0);
+  const totalUsed = filteredAppts.reduce((sum, a) => sum + (a.totalPrice || 0), 0);
   
   const totalEmployees = filteredDepts.reduce((sum, d) => sum + d.employeeCount, 0);
   const completedCount = filteredAppts.filter(a => a.status === 'completed').length;
@@ -54,7 +57,7 @@ export const getDashboardStats = (filters?: FilterParams): DashboardStats => {
   const abnormalCount = filters?.departmentId 
     ? reports.filter(r => {
         const appt = appointments.find(a => a.id === r.appointmentId);
-        return appt?.departmentId === filters.departmentId && r.status === 'abnormal';
+        return appt?.departmentId === filters.departmentId && (r.status === 'abnormal' || r.status === 'recheck_required');
       }).length
     : getAbnormalReportsCount();
 

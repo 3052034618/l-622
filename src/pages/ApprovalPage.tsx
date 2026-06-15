@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useApprovalStore } from '@/store/useApprovalStore';
+import { usePermission } from '@/hooks/usePermission';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -26,9 +27,11 @@ import dayjs from 'dayjs';
 
 export function ApprovalPage() {
   const { user } = useAuthStore();
+  const { isHR, isAdmin } = usePermission();
   const { 
     approvals, 
     loadApprovals, 
+    loadAllApprovals,
     pendingCount,
     approveApproval, 
     rejectApproval, 
@@ -44,10 +47,14 @@ export function ApprovalPage() {
 
   useEffect(() => {
     if (user) {
-      loadApprovals(user.id);
+      if (isAdmin) {
+        loadAllApprovals();
+      } else {
+        loadApprovals(user.id);
+      }
       checkAndEscalate();
     }
-  }, [user, loadApprovals, checkAndEscalate]);
+  }, [user, isAdmin, loadApprovals, loadAllApprovals, checkAndEscalate]);
 
   const filteredApprovals = approvals.filter(a => {
     if (activeTab === 'all') return true;

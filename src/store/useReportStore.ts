@@ -23,8 +23,8 @@ interface ReportState {
   submitReport: (doctorId?: string, doctorName?: string) => Promise<{ success: boolean; message: string }>;
   markAsRecheck: (reportId: string) => Promise<{ success: boolean; message: string }>;
   clearDraft: () => void;
+  loadAllReports: () => void;
 }
-
 const defaultExamItems: Omit<ReportItem, 'id'>[] = [
   { name: '身高', value: '', unit: 'cm', category: '一般检查', isAbnormal: false },
   { name: '体重', value: '', unit: 'kg', referenceRange: '根据身高计算', category: '一般检查', isAbnormal: false },
@@ -147,21 +147,33 @@ export const useReportStore = create<ReportState>((set, get) => ({
       id: `draft-item-${index}`
     }));
     
+    const draft: Report = {
+      id: `draft-${Date.now()}`,
+      appointmentId: appointment.id,
+      userId: user.id,
+      userName: user.name,
+      patientName: user.name,
+      reportNo: '',
+      packageName: appointment.packageName,
+      totalAmount: appointment.totalPrice || 0,
+      doctorAdvice: '',
+      verifiedAt: '',
+      userGender: user.gender,
+      userAge: user.age,
+      doctorId: '',
+      doctorName: '',
+      examDate: dayjs().format('YYYY-MM-DD'),
+      status: 'draft',
+      items,
+      abnormalItems: [],
+      suggestion: '',
+      createdAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      updatedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    };
+    
     set({
-      draftReport: {
-        appointmentId: appointment.id,
-        userId: user.id,
-        userName: user.name,
-        patientName: user.name,
-        userGender: user.gender,
-        userAge: user.age,
-        packageName: appointment.packageName,
-        status: 'draft',
-        items,
-        abnormalItems: [],
-        suggestion: '',
-        doctorAdvice: '',
-      }
+      draftReport: draft,
+      currentReport: draft,
     });
   },
 
@@ -184,19 +196,23 @@ export const useReportStore = create<ReportState>((set, get) => ({
       .filter(item => item.isAbnormal)
       .map(item => item.name);
     
+    const updatedDraft = {
+      ...draftReport,
+      items: updatedItems,
+      abnormalItems,
+    };
+    
     set({
-      draftReport: {
-        ...draftReport,
-        items: updatedItems,
-        abnormalItems,
-      }
+      draftReport: updatedDraft,
+      currentReport: updatedDraft as Report,
     });
   },
 
   updateDoctorAdvice: (advice: string) => {
     const { draftReport } = get();
     if (!draftReport) return;
-    set({ draftReport: { ...draftReport, doctorAdvice: advice, suggestion: advice } });
+    const updated = { ...draftReport, doctorAdvice: advice, suggestion: advice };
+    set({ draftReport: updated, currentReport: updated as Report });
   },
 
   updateDraftItem: (itemId: string, value: string, isAbnormal: boolean, abnormalType?: 'high' | 'low') => {
@@ -211,19 +227,23 @@ export const useReportStore = create<ReportState>((set, get) => ({
       .filter(item => item.isAbnormal)
       .map(item => item.name);
     
+    const updated = {
+      ...draftReport,
+      items: updatedItems,
+      abnormalItems,
+    };
+    
     set({
-      draftReport: {
-        ...draftReport,
-        items: updatedItems,
-        abnormalItems,
-      }
+      draftReport: updated,
+      currentReport: updated as Report,
     });
   },
 
   updateDraftSuggestion: (suggestion: string) => {
     const { draftReport } = get();
     if (!draftReport) return;
-    set({ draftReport: { ...draftReport, suggestion } });
+    const updated = { ...draftReport, suggestion };
+    set({ draftReport: updated, currentReport: updated as Report });
   },
 
   validateReport: () => {
@@ -265,7 +285,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const status: ReportStatus = validation.abnormalCount > 0 ? 'abnormal' : 'normal';
+    const status: ReportStatus = validation.abnormalCount > 0 ? 'recheck_required' : 'normal';
     const finalDoctorId = doctorId || 'default-doctor';
     const finalDoctorName = doctorName || '系统医生';
     
