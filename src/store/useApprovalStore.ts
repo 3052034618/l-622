@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Approval, ApprovalStatus, ApprovalLevel } from '@/types';
 import { approvals, getApprovalsByApproverId, getApprovalsByStatus, checkEscalation } from '@/mock/data/approvals';
+import { users } from '@/mock/data/users';
 import dayjs from 'dayjs';
 
 interface ApprovalState {
@@ -27,12 +28,23 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
   selectedApproval: null,
 
   loadApprovals: (approverId: string) => {
-    const mockUserApprovals = approvals.filter(a =>
-      a.approverId === approverId || (a.escalated && a.level === 'hr_manager')
-    );
+    const currentUser = users.find(u => u.id === approverId);
+    const isHRUser = currentUser?.role === 'hr';
+
+    let mockUserApprovals: Approval[];
+    if (isHRUser) {
+      mockUserApprovals = approvals.filter(a =>
+        a.approverId === approverId ||
+        a.level === 'hr_manager' ||
+        (a.escalated && a.level === 'hr_manager')
+      );
+    } else {
+      mockUserApprovals = approvals.filter(a =>
+        a.approverId === approverId || (a.escalated && a.level === 'hr_manager')
+      );
+    }
 
     const stateApprovals = get().approvals;
-
     const existingIds = new Set(stateApprovals.map(a => a.id));
     const newMockApprovals = mockUserApprovals.filter(a => !existingIds.has(a.id));
 
@@ -83,6 +95,7 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
     }
     
     const newStatus: ApprovalStatus = approved ? 'approved' : 'rejected';
+    let updatedApprovals: Approval[];
     
     if (approval.level === 'supervisor' && approved) {
       const hrApproval: Approval = {
@@ -95,22 +108,19 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
         createdAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
       };
       
-      set(state => ({
-        approvals: state.approvals.map(a => 
-          a.id === id ? { ...a, status: newStatus, processedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'), comment } : a
-        ).concat(hrApproval),
-        pendingCount: state.pendingCount,
-      }));
-      
-      return { success: true, message: '审批通过，已提交HR经理复核' };
+      updatedApprovals = get().approvals.map(a => 
+        a.id === id ? { ...a, status: newStatus, processedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'), comment } : a
+      ).concat(hrApproval);
+    } else {
+      updatedApprovals = get().approvals.map(a => 
+        a.id === id ? { ...a, status: newStatus, processedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'), comment } : a
+      );
     }
     
-    set(state => ({
-      approvals: state.approvals.map(a => 
-        a.id === id ? { ...a, status: newStatus, processedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'), comment } : a
-      ),
-      pendingCount: state.pendingCount - 1,
-    }));
+    set({
+      approvals: updatedApprovals,
+      pendingCount: updatedApprovals.filter(a => a.status === 'pending' || a.status === 'escalated').length,
+    });
     
     return { success: true, message: approved ? '审批通过' : '已驳回' };
   },
@@ -166,6 +176,7 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
     }
 
     const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    let updatedApprovals: Approval[];
 
     if (approval.level === 'supervisor') {
       const hrApproval: Approval = {
@@ -180,22 +191,26 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
         createdAt: now,
       };
 
-      set(state => ({
-        approvals: state.approvals.map(a =>
-          a.id === id ? { ...a, status: 'approved' as ApprovalStatus, processedAt: now, comment } : a
-        ).concat(hrApproval),
-        pendingCount: state.pendingCount,
-      }));
+      updatedApprovals = get().approvals.map(a =>
+        a.id === id ? { ...a, status: 'approved' as ApprovalStatus, processedAt: now, comment } : a
+      ).concat(hrApproval);
+
+      set({
+        approvals: updatedApprovals,
+        pendingCount: updatedApprovals.filter(a => a.status === 'pending' || a.status === 'escalated').length,
+      });
 
       return { success: true, message: '审批通过，已提交HR经理复核' };
     }
 
-    set(state => ({
-      approvals: state.approvals.map(a =>
-        a.id === id ? { ...a, status: 'approved' as ApprovalStatus, processedAt: now, comment } : a
-      ),
-      pendingCount: state.pendingCount - 1,
-    }));
+    updatedApprovals = get().approvals.map(a =>
+      a.id === id ? { ...a, status: 'approved' as ApprovalStatus, processedAt: now, comment } : a
+    );
+
+    set({
+      approvals: updatedApprovals,
+      pendingCount: updatedApprovals.filter(a => a.status === 'pending' || a.status === 'escalated').length,
+    });
 
     return { success: true, message: '审批通过' };
   },
@@ -210,12 +225,14 @@ export const useApprovalStore = create<ApprovalState>((set, get) => ({
 
     const now = dayjs().format('YYYY-MM-DD HH:mm:ss');
 
-    set(state => ({
-      approvals: state.approvals.map(a =>
-        a.id === id ? { ...a, status: 'rejected' as ApprovalStatus, processedAt: now, comment } : a
-      ),
-      pendingCount: state.pendingCount - 1,
-    }));
+    const updatedApprovals = get().approvals.map(a =>
+      a.id === id ? { ...a, status: 'rejected' as ApprovalStatus, processedAt: now, comment } : a
+    );
+
+    set({
+      approvals: updatedApprovals,
+      pendingCount: updatedApprovals.filter(a => a.status === 'pending' || a.status === 'escalated').length,
+    });
 
     return { success: true, message: '已驳回' };
   },

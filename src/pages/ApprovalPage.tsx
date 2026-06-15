@@ -110,7 +110,7 @@ export function ApprovalPage() {
   };
 
   const stats = [
-    { label: '待审批', value: approvals.filter(a => a.status === 'pending').length, color: 'warning', icon: Clock },
+    { label: '待审批', value: approvals.filter(a => a.status === 'pending' || a.status === 'escalated').length, color: 'warning', icon: Clock },
     { label: '已通过', value: approvals.filter(a => a.status === 'approved').length, color: 'success', icon: CheckCircle },
     { label: '已驳回', value: approvals.filter(a => a.status === 'rejected').length, color: 'danger', icon: XCircle },
     { label: '已越级', value: approvals.filter(a => a.escalated).length, color: 'primary', icon: ArrowUpCircle },

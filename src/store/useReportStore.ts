@@ -297,7 +297,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
       patientName: draftReport!.patientName || draftReport!.userName!,
       reportNo: `RPT-${Date.now()}`,
       packageName: draftReport!.packageName || '',
-      totalAmount: 0,
+      totalAmount: draftReport!.totalAmount || 0,
       doctorAdvice: draftReport!.doctorAdvice || draftReport!.suggestion || '',
       verifiedAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
       userGender: draftReport!.userGender!,
@@ -321,7 +321,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     
     return { 
       success: true, 
-      message: status === 'abnormal' ? '报告已提交，已触发复检通知' : '报告已提交，已推送至员工端' 
+      message: status === 'recheck_required' ? '报告已提交，已触发复检通知' : '报告已提交，已推送至员工端' 
     };
   },
 

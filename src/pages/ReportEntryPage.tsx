@@ -288,7 +288,7 @@ export function ReportEntryPage() {
                     )}
 
                     <div className="space-y-4">
-                      {['一般检查', '实验室检查', '影像学检查', '专科检查'].map(category => {
+                      {Array.from(new Set(currentReport.items.map(item => item.category))).map(category => {
                         const categoryItems = currentReport.items.filter(item => item.category === category);
                         if (categoryItems.length === 0) return null;
 
